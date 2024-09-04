@@ -1,14 +1,15 @@
-# engine.py
-
 import pygame
 import moderngl
 import numpy as np
 from camera import Camera
 
-class SimpleEngine:
+class ScrunkEngine:
     def __init__(self, width=800, height=600):
+        self.last_mouse_pos = None
         pygame.init()
         pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.OPENGL)
+        pygame.display.set_caption("3D but scrunkly", "")
+
         self.ctx = moderngl.create_context()
         self.ctx.enable(moderngl.DEPTH_TEST)
         self.width, self.height = width, height
@@ -19,6 +20,7 @@ class SimpleEngine:
         self.prog['projection'].write(self.projection)
 
         self.camera = Camera([0.0, 0.0, 3.0], [0.0, 1.0, 0.0])
+
         self.prog['view'].write(self.camera.create_view_matrix())
 
         pygame.event.set_grab(True)
@@ -30,11 +32,11 @@ class SimpleEngine:
             vertex_shader="""
             #version 330
             in vec3 in_vert;
-            in vec3 in_normal; // Normal attribute
+            in vec3 in_normal; 
             in vec3 in_color;
             out vec3 fragColor;
-            out vec3 fragNormal; // Pass normal to fragment shader
-            out vec3 fragLightDir; // Pass light direction to fragment shader
+            out vec3 fragNormal; 
+            out vec3 fragLightDir; 
 
             uniform mat4 model;
             uniform mat4 view;
@@ -43,38 +45,33 @@ class SimpleEngine:
             void main() {
                 gl_Position = projection * view * model * vec4(in_vert, 1.0);
                 fragColor = in_color;
-                fragNormal = normalize(mat3(model) * in_normal); // Transform normal to world space
+                fragNormal = normalize(mat3(model) * in_normal); 
             }
             """,
             fragment_shader="""
             #version 330
             in vec3 fragColor;
             in vec3 fragNormal;
-            in vec3 fragLightDir; // Light direction passed from vertex shader
+            in vec3 fragLightDir; 
             out vec4 fragColorOut;
 
-            uniform vec3 lightPos; // Position of the light source
-            uniform vec3 viewPos;  // Position of the camera/viewer
+            uniform vec3 lightPos; 
+            uniform vec3 viewPos;  
 
             void main() {
-                // Basic lighting model
                 vec3 lightDir = normalize(lightPos - fragNormal);
                 vec3 norm = normalize(fragNormal);
 
-                // Ambient light
                 vec3 ambient = 0.1 * fragColor;
 
-                // Diffuse light
                 float diff = max(dot(norm, lightDir), 0.0);
                 vec3 diffuse = diff * fragColor;
 
-                // Specular light
                 vec3 viewDir = normalize(viewPos - fragNormal);
                 vec3 reflectDir = reflect(-lightDir, norm);
                 float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
                 vec3 specular = vec3(1.0) * spec;
 
-                // Combine results
                 vec3 result = ambient + diffuse + specular;
                 fragColorOut = vec4(result, 1.0);
             }
@@ -82,13 +79,12 @@ class SimpleEngine:
         )
 
     def create_buffers(self):
-        # Vertices with normals and colors
         vbo = self.ctx.buffer(np.array([
-             0.0,  0.5,  0.0,   0.0, 0.0, 1.0, 1.0, 0.0, 0.0,  # Vertex 0 (color: red)
-            -0.5, -0.5,  0.5,   0.0, 0.0, 1.0, 0.5, 1.0, 0.5,  # Vertex 1 (color: green)
-             0.5, -0.5,  0.5,   0.0, 0.0, 1.0, 0.5, 0.5, 1.0,  # Vertex 2 (color: blue)
-             0.5, -0.5, -0.5,   0.0, 0.0, 1.0, 1.0, 1.0, 0.5,  # Vertex 3 (color: yellow)
-            -0.5, -0.5, -0.5,   0.0, 0.0, 1.0, 1.0, 0.5, 0.5,  # Vertex 4 (color: cyan)
+             0.0,  0.5,  0.0,   0.0, 0.0, 1.0, 1.0, 0.0, 0.0,  # R, Vertex 0
+            -0.5, -0.5,  0.5,   0.0, 0.0, 1.0, 0.5, 1.0, 0.5,  # G, Vertex 1
+             0.5, -0.5,  0.5,   0.0, 0.0, 1.0, 0.5, 0.5, 1.0,  # B, Vertex 2
+             0.5, -0.5, -0.5,   0.0, 0.0, 1.0, 1.0, 1.0, 0.5,  # Y, Vertex 3
+            -0.5, -0.5, -0.5,   0.0, 0.0, 1.0, 1.0, 0.5, 0.5,  # C, Vertex 4
         ], dtype='f4').tobytes())
 
         ibo = self.ctx.buffer(np.array([
@@ -106,7 +102,7 @@ class SimpleEngine:
 
     def create_projection_matrix(self):
         aspect_ratio = self.width / self.height
-        fov = 45.0
+        fov = 50.0
         near, far = 0.1, 100.0
         f = 1.0 / np.tan(np.radians(fov) / 2.0)
         return np.array([
@@ -141,9 +137,8 @@ class SimpleEngine:
     def run(self):
         clock = pygame.time.Clock()
 
-        # Set light and camera positions
-        self.prog['lightPos'].value = (2.0, 2.0, 2.0)  # Light source position
-        self.prog['viewPos'].value = self.camera.position  # Camera position
+        self.prog['lightPos'].value = (6, 6, 6)
+        self.prog['viewPos'].value = self.camera.position
 
         while True:
             for event in pygame.event.get():
@@ -167,5 +162,5 @@ class SimpleEngine:
             clock.tick(60)
 
 if __name__ == "__main__":
-    engine = SimpleEngine()
+    engine = ScrunkEngine()
     engine.run()

@@ -1,5 +1,3 @@
-# camera.py
-
 import numpy as np
 from math import sin, cos, radians
 
