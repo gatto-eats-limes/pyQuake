@@ -19,8 +19,7 @@ class ScrunkEngine:
         self.projection = self.create_projection_matrix()
         self.prog['projection'].write(self.projection)
 
-        self.camera = Camera([0.0, 0.0, 3.0], [0.0, 1.0, 0.0])
-
+        self.camera = Camera([0.0, 1.0, 3.0], [0.0, 1.0, 0.0])
         self.prog['view'].write(self.camera.create_view_matrix())
 
         pygame.event.set_grab(True)
@@ -28,72 +27,76 @@ class ScrunkEngine:
         self.center_mouse()
 
     def create_program(self):
-        return self.ctx.program(
-            vertex_shader="""
-            #version 330
-            in vec3 in_vert;
-            in vec3 in_normal; 
-            in vec3 in_color;
-            out vec3 fragColor;
-            out vec3 fragNormal; 
-            out vec3 fragLightDir; 
+        try:
+            prog = self.ctx.program(
+                vertex_shader="""
+                #version 330
+                in vec3 in_vert;
+                in vec3 in_normal; 
+                in vec3 in_color;
+                out vec3 fragColor;
+                out vec3 fragNormal; 
+                out vec3 fragPosition;
 
-            uniform mat4 model;
-            uniform mat4 view;
-            uniform mat4 projection;
+                uniform mat4 model;
+                uniform mat4 view;
+                uniform mat4 projection;
 
-            void main() {
-                gl_Position = projection * view * model * vec4(in_vert, 1.0);
-                fragColor = in_color;
-                fragNormal = normalize(mat3(model) * in_normal); 
-            }
-            """,
-            fragment_shader="""
-            #version 330
-            in vec3 fragColor;
-            in vec3 fragNormal;
-            in vec3 fragLightDir; 
-            out vec4 fragColorOut;
+                void main() {
+                    vec4 worldPosition = model * vec4(in_vert, 1.0);
+                    gl_Position = projection * view * worldPosition;
+                    fragColor = in_color;
+                    fragNormal = normalize(mat3(model) * in_normal); 
+                    fragPosition = vec3(worldPosition);
+                }
+                """,
+                fragment_shader="""
+                #version 330
+                in vec3 fragColor;
+                in vec3 fragNormal;
+                in vec3 fragPosition;
+                out vec4 fragColorOut;
 
-            uniform vec3 lightPos; 
-            uniform vec3 viewPos;  
+                uniform vec3 lightPos; 
+                uniform vec3 viewPos;  
 
-            void main() {
-                vec3 lightDir = normalize(lightPos - fragNormal);
-                vec3 norm = normalize(fragNormal);
+                void main() {
+                    vec3 lightDir = normalize(lightPos - fragPosition);
+                    vec3 norm = normalize(fragNormal);
 
-                vec3 ambient = 0.1 * fragColor;
+                    vec3 ambient = 0.2 * fragColor; // Increased ambient lighting
 
-                float diff = max(dot(norm, lightDir), 0.0);
-                vec3 diffuse = diff * fragColor;
+                    float diff = max(dot(norm, lightDir), 0.0);
+                    vec3 diffuse = diff * fragColor;
 
-                vec3 viewDir = normalize(viewPos - fragNormal);
-                vec3 reflectDir = reflect(-lightDir, norm);
-                float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
-                vec3 specular = vec3(1.0) * spec;
+                    vec3 viewDir = normalize(viewPos - fragPosition);
+                    vec3 reflectDir = reflect(-lightDir, norm);
+                    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
+                    vec3 specular = spec * vec3(1.0);
 
-                vec3 result = ambient + diffuse + specular;
-                fragColorOut = vec4(result, 1.0);
-            }
-            """
-        )
+                    vec3 result = ambient + diffuse + specular;
+                    fragColorOut = vec4(result, 1.0);
+                }
+                """
+            )
+            return prog
+
+        except Exception as e:
+            print("Shader compilation failed:", e)
+            raise
 
     def create_buffers(self):
+        # Define a square (two triangles)
         vbo = self.ctx.buffer(np.array([
-             0.0,  0.5,  0.0,   0.0, 0.0, 1.0, 1.0, 0.0, 0.0,  # R, Vertex 0
-            -0.5, -0.5,  0.5,   0.0, 0.0, 1.0, 0.5, 1.0, 0.5,  # G, Vertex 1
-             0.5, -0.5,  0.5,   0.0, 0.0, 1.0, 0.5, 0.5, 1.0,  # B, Vertex 2
-             0.5, -0.5, -0.5,   0.0, 0.0, 1.0, 1.0, 1.0, 0.5,  # Y, Vertex 3
-            -0.5, -0.5, -0.5,   0.0, 0.0, 1.0, 1.0, 0.5, 0.5,  # C, Vertex 4
+             0.5,  0.5,  0.0,   0.0, 0.0, 1.0, 1.0, 0.0, 0.0,  # Vertex 0 (top right)
+            -0.5,  0.5,  0.0,   0.0, 0.0, 1.0, 0.0, 0.0, 1.0,  # Vertex 1 (top left)
+            -0.5, -0.5,  0.0,   0.0, 0.0, 1.0, 0.0, 1.0, 0.5,  # Vertex 2 (bottom left)
+             0.5, -0.5,  0.0,   0.0, 0.0, 1.0, 1.0, 1.0, 0.5,  # Vertex 3 (bottom right)
         ], dtype='f4').tobytes())
 
         ibo = self.ctx.buffer(np.array([
-            0, 1, 2,
-            0, 2, 3,
-            0, 3, 4,
-            0, 4, 1,
-            1, 2, 3,
-            1, 3, 4,
+            0, 1, 2,  # First triangle
+            0, 2, 3   # Second triangle
         ], dtype='i4').tobytes())
 
         vao = self.ctx.vertex_array(self.prog, [(vbo, '3f 3f 3f', 'in_vert', 'in_normal', 'in_color')], ibo)
@@ -116,16 +119,24 @@ class ScrunkEngine:
         pygame.mouse.set_pos(self.width // 2, self.height // 2)
         self.last_mouse_pos = pygame.mouse.get_pos()
 
-    def handle_input(self):
+    def handle_input(self, delta_time):
         keys = pygame.key.get_pressed()
+        forward_input = 0
+        right_input = 0
+
         if keys[pygame.K_a]:
-            self.camera.strafe(-1, 0.05)
+            right_input = -1  # Move left
         if keys[pygame.K_d]:
-            self.camera.strafe(1, 0.05)
+            right_input = 1   # Move right
         if keys[pygame.K_w]:
-            self.camera.move_forward(0.05)
+            forward_input = 1  # Move forward
         if keys[pygame.K_s]:
-            self.camera.move_forward(-0.05)
+            forward_input = -1  # Move backward
+
+        self.camera.update_velocity(forward_input, right_input, delta_time)
+
+        if keys[pygame.K_SPACE] and self.camera.grounded:
+            self.camera.jump()
 
     def handle_mouse_movement(self):
         mouse_pos = pygame.mouse.get_pos()
@@ -137,29 +148,36 @@ class ScrunkEngine:
     def run(self):
         clock = pygame.time.Clock()
 
-        self.prog['lightPos'].value = (6, 6, 6)
-        self.prog['viewPos'].value = self.camera.position
+        try:
+            self.prog['lightPos'].value = (6, 6, 6)
+            self.prog['viewPos'].value = tuple(self.camera.position)  # Convert position to a tuple
 
-        while True:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    return
+            while True:
+                delta_time = clock.tick(60) / 1000.0  # Time in seconds
 
-            self.handle_input()
-            self.handle_mouse_movement()
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        return
 
-            self.ctx.clear(0.1, 0.1, 0.1)
-            self.ctx.clear(depth=1.0)
+                self.handle_input(delta_time)
+                self.camera.apply_gravity(delta_time)  # Apply gravity to the camera
+                self.handle_mouse_movement()
 
-            self.prog['view'].write(self.camera.create_view_matrix())
+                self.ctx.clear(0.1, 0.1, 0.1)
+                self.ctx.clear(depth=1.0)
 
-            model = np.identity(4, dtype='f4')
-            self.prog['model'].write(model.tobytes())
+                self.prog['view'].write(self.camera.create_view_matrix())
 
-            self.vao.render(moderngl.TRIANGLES)
-            pygame.display.flip()
-            clock.tick(60)
+                model = np.identity(4, dtype='f4')
+                self.prog['model'].write(model.tobytes())
+
+                self.vao.render(moderngl.TRIANGLES)
+
+                pygame.display.flip()
+        except KeyError as e:
+            print(f"Uniform error: {e}")
+            pygame.quit()
 
 if __name__ == "__main__":
     engine = ScrunkEngine()
