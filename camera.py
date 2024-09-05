@@ -1,19 +1,20 @@
 import numpy as np
 from math import sin, cos, radians
 
-class Camera:
+class Player:
     def __init__(self, position, up_vector):
         self.position = np.array(position, dtype='f4')
         self.up_vector = np.array(up_vector, dtype='f4')
         self.yaw = -90.0
         self.pitch = 0.0
         self.front = np.array([0.0, 0.0, -1.0], dtype='f4')
-        self.speed = 34.0  # Speed of the player
+        self.speed = 5.0  # Adjust speed as needed
         self.jump_force = 2.8
-        self.grounded = True  # Is the player grounded?
-        self.gravity = -9.81  # Gravity value
-        self.velocity = np.array([0.0, 0.0, 0.0], dtype='f4')  # Initial velocity
-        self.friction = 0.18  # Friction coefficient
+        self.grounded = True
+        self.gravity = -9.81
+        self.velocity = np.array([0.0, 0.0, 0.0], dtype='f4')
+        self.friction = 0.1
+        self.acceleration = 10.0  # Acceleration value
 
         self.update_camera_vectors()
 
@@ -46,16 +47,6 @@ class Camera:
             self.pitch = -89.0
         self.update_camera_vectors()
 
-    def strafe(self, direction, delta_time):
-        velocity = self.speed * delta_time
-        self.position += direction * self.right * velocity
-
-    def move_forward(self, direction, delta_time):
-        velocity = self.speed * delta_time
-        forward_flat = np.array([self.front[0], 0, self.front[2]])
-        forward_flat /= np.linalg.norm(forward_flat)  # Normalize the flat forward vector
-        self.position += direction * forward_flat * velocity
-
     def jump(self):
         if self.grounded:
             self.velocity[1] = self.jump_force
@@ -66,23 +57,21 @@ class Camera:
             self.velocity[1] += self.gravity * delta_time
             self.position[1] += self.velocity[1] * delta_time
 
-        # Check if on ground
         if self.position[1] <= 0:  # Assuming ground is at y = 0
             self.position[1] = 0
             self.grounded = True
             self.velocity[1] = 0
 
     def update_velocity(self, forward_input, right_input, delta_time):
-        # Apply input to velocity
-        if forward_input != 0:
-            forward_velocity = self.speed * forward_input * delta_time
-            self.velocity[0] += forward_velocity * self.front[0]
-            self.velocity[2] += forward_velocity * self.front[2]
+        # Calculate acceleration based on input
+        forward_acceleration = self.acceleration * forward_input
+        right_acceleration = self.acceleration * right_input
 
-        if right_input != 0:
-            right_velocity = self.speed * right_input * delta_time
-            self.velocity[0] += right_velocity * self.right[0]
-            self.velocity[2] += right_velocity * self.right[2]
+        # Update velocity based on acceleration
+        self.velocity[0] += right_acceleration * self.right[0] * delta_time
+        self.velocity[0] += forward_acceleration * self.front[0] * delta_time
+        self.velocity[2] += right_acceleration * self.right[2] * delta_time
+        self.velocity[2] += forward_acceleration * self.front[2] * delta_time
 
         # Apply friction
         self.velocity[0] *= (1.0 - self.friction)
@@ -90,3 +79,37 @@ class Camera:
 
         # Update position based on velocity
         self.position += self.velocity * delta_time
+
+    def check_collision(self, min_bound, max_bound):
+        player_min = np.array([self.position[0] - 0.25, self.position[1] - 0.5, self.position[2] - 0.25])
+        player_max = np.array([self.position[0] + 0.25, self.position[1] + 0.5, self.position[2] + 0.25])
+
+        if (player_min[0] < max_bound[0] and player_max[0] > min_bound[0] and
+            player_min[1] < max_bound[1] and player_max[1] > min_bound[1] and
+            player_min[2] < max_bound[2] and player_max[2] > min_bound[2]):
+            return True
+        return False
+
+    def resolve_collision(self, min_bound, max_bound):
+        player_min = np.array([self.position[0] - 0.25, self.position[1] - 0.5, self.position[2] - 0.25])
+        player_max = np.array([self.position[0] + 0.25, self.position[1] + 0.5, self.position[2] + 0.25])
+
+        overlap_x = min(max_bound[0] - player_min[0], player_max[0] - min_bound[0])
+        overlap_y = min(max_bound[1] - player_min[1], player_max[1] - min_bound[1])
+        overlap_z = min(max_bound[2] - player_min[2], player_max[2] - min_bound[2])
+
+        if overlap_x < overlap_y and overlap_x < overlap_z:
+            if self.position[0] < (min_bound[0] + max_bound[0]) / 2:
+                self.position[0] -= overlap_x  # Push player left
+            else:
+                self.position[0] += overlap_x  # Push player right
+        elif overlap_y < overlap_x and overlap_y < overlap_z:
+            if self.position[1] < (min_bound[1] + max_bound[1]) / 2:
+                self.position[1] -= overlap_y  # Push player down
+            else:
+                self.position[1] += overlap_y  # Push player up
+        else:
+            if self.position[2] < (min_bound[2] + max_bound[2]) / 2:
+                self.position[2] -= overlap_z  # Push player back
+            else:
+                self.position[2] += overlap_z  # Push player forward

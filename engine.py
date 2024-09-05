@@ -1,7 +1,7 @@
 import pygame
 import moderngl
 import numpy as np
-from camera import Camera
+from camera import Player  # Adjusted to import Player class
 
 class ScrunkEngine:
     def __init__(self, width=800, height=600):
@@ -19,8 +19,8 @@ class ScrunkEngine:
         self.projection = self.create_projection_matrix()
         self.prog['projection'].write(self.projection)
 
-        self.camera = Camera([0.0, 1.0, 3.0], [0.0, 1.0, 0.0])
-        self.prog['view'].write(self.camera.create_view_matrix())
+        self.player = Player([0.0, 1.0, 3.0], [0.0, 1.0, 0.0])
+        self.prog['view'].write(self.player.create_view_matrix())
 
         pygame.event.set_grab(True)
         pygame.mouse.set_visible(False)
@@ -133,24 +133,34 @@ class ScrunkEngine:
         if keys[pygame.K_s]:
             forward_input = -1  # Move backward
 
-        self.camera.update_velocity(forward_input, right_input, delta_time)
+        self.player.update_velocity(forward_input, right_input, delta_time)
 
-        if keys[pygame.K_SPACE] and self.camera.grounded:
-            self.camera.jump()
+        if keys[pygame.K_SPACE] and self.player.grounded:
+            self.player.jump()
 
     def handle_mouse_movement(self):
         mouse_pos = pygame.mouse.get_pos()
         x_offset = mouse_pos[0] - self.last_mouse_pos[0]
         y_offset = mouse_pos[1] - self.last_mouse_pos[1]
-        self.camera.process_mouse_movement(x_offset, y_offset)
+        self.player.process_mouse_movement(x_offset, y_offset)
         self.center_mouse()
+
+    def check_collisions(self):
+        # Define the square's collision bounds
+        min_bound = np.array([-0.5, 0, -0.5], dtype='f4')
+        max_bound = np.array([0.5, 0.5, 0.5], dtype='f4')
+
+        # Check if the player collides with the square
+        if self.player.check_collision(min_bound, max_bound):
+            # Resolve the collision by adjusting the player's position
+            self.player.resolve_collision(min_bound, max_bound)
 
     def run(self):
         clock = pygame.time.Clock()
 
         try:
             self.prog['lightPos'].value = (6, 6, 6)
-            self.prog['viewPos'].value = tuple(self.camera.position)  # Convert position to a tuple
+            self.prog['viewPos'].value = tuple(self.player.position)
 
             while True:
                 delta_time = clock.tick(60) / 1000.0  # Time in seconds
@@ -161,13 +171,15 @@ class ScrunkEngine:
                         return
 
                 self.handle_input(delta_time)
-                self.camera.apply_gravity(delta_time)  # Apply gravity to the camera
+                self.player.apply_gravity(delta_time)  # Apply gravity to the player
                 self.handle_mouse_movement()
+
+                self.check_collisions()  # Check for collisions with the square
 
                 self.ctx.clear(0.1, 0.1, 0.1)
                 self.ctx.clear(depth=1.0)
 
-                self.prog['view'].write(self.camera.create_view_matrix())
+                self.prog['view'].write(self.player.create_view_matrix())
 
                 model = np.identity(4, dtype='f4')
                 self.prog['model'].write(model.tobytes())
