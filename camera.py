@@ -1,7 +1,6 @@
 import numpy as np
 from math import sin, cos, radians
 
-# Fun
 class Player:
     def __init__(self, position, up_vector):
         self.position = np.array(position, dtype='f4')
@@ -56,7 +55,7 @@ class Player:
     def apply_gravity(self, delta_time):
         if not self.grounded:
             self.velocity[1] += self.gravity * delta_time
-            self.position[1] += self.velocity[1] * delta_time
+        self.position[1] += self.velocity[1] * delta_time
 
         if self.position[1] <= 0:  # Assuming ground is at y = 0
             self.position[1] = 0
@@ -114,3 +113,14 @@ class Player:
                 self.position[2] -= overlap_z  # Push player back
             else:
                 self.position[2] += overlap_z  # Push player forward
+
+    def update_physics(self, delta_time, forward_input, right_input, min_bound, max_bound):
+        # Update velocity based on player input
+        self.update_velocity(forward_input, right_input, delta_time)
+
+        # Apply gravity each frame
+        self.apply_gravity(delta_time)
+
+        # Check and resolve collisions with the environment
+        if self.check_collision(min_bound, max_bound):
+            self.resolve_collision(min_bound, max_bound)
