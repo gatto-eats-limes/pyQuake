@@ -8,13 +8,13 @@ class Player:
         self.yaw = -90.0
         self.pitch = 0.0
         self.front = np.array([0.0, 0.0, -1.0], dtype='f4')
-        self.speed = 5.0  # Adjust speed as needed
+        self.speed = 5.0
         self.jump_force = 2.8
         self.grounded = True
         self.gravity = -9.81
         self.velocity = np.array([0.0, 0.0, 0.0], dtype='f4')
         self.friction = 0.1
-        self.acceleration = 10.0  # Acceleration value
+        self.acceleration = 10.0
 
         self.update_camera_vectors()
 
@@ -55,30 +55,30 @@ class Player:
     def apply_gravity(self, delta_time):
         if not self.grounded:
             self.velocity[1] += self.gravity * delta_time
-        self.position[1] += self.velocity[1] * delta_time
+            self.position[1] += self.velocity[1] * delta_time
 
-        if self.position[1] <= 0:  # Assuming ground is at y = 0
+        if self.position[1] <= 0:
             self.position[1] = 0
             self.grounded = True
             self.velocity[1] = 0
 
     def update_velocity(self, forward_input, right_input, delta_time):
-        # Calculate acceleration based on input
         forward_acceleration = self.acceleration * forward_input
         right_acceleration = self.acceleration * right_input
 
-        # Update velocity based on acceleration
+        # Update the velocity in the x and z directions
         self.velocity[0] += right_acceleration * self.right[0] * delta_time
-        self.velocity[0] += forward_acceleration * self.front[0] * delta_time
         self.velocity[2] += right_acceleration * self.right[2] * delta_time
+        self.velocity[0] += forward_acceleration * self.front[0] * delta_time
         self.velocity[2] += forward_acceleration * self.front[2] * delta_time
 
         # Apply friction
         self.velocity[0] *= (1.0 - self.friction)
         self.velocity[2] *= (1.0 - self.friction)
 
-        # Update position based on velocity
-        self.position += self.velocity * delta_time
+        # Update position based on horizontal velocity
+        self.position[0] += self.velocity[0] * delta_time
+        self.position[2] += self.velocity[2] * delta_time
 
     def check_collision(self, min_bound, max_bound):
         player_min = np.array([self.position[0] - 0.25, self.position[1] - 0.5, self.position[2] - 0.25])
@@ -100,27 +100,23 @@ class Player:
 
         if overlap_x < overlap_y and overlap_x < overlap_z:
             if self.position[0] < (min_bound[0] + max_bound[0]) / 2:
-                self.position[0] -= overlap_x  # Push player left
+                self.position[0] -= overlap_x
             else:
-                self.position[0] += overlap_x  # Push player right
+                self.position[0] += overlap_x
         elif overlap_y < overlap_x and overlap_y < overlap_z:
             if self.position[1] < (min_bound[1] + max_bound[1]) / 2:
-                self.position[1] -= overlap_y  # Push player down
+                self.position[1] -= overlap_y
             else:
-                self.position[1] += overlap_y  # Push player up
+                self.position[1] += overlap_y
         else:
             if self.position[2] < (min_bound[2] + max_bound[2]) / 2:
-                self.position[2] -= overlap_z  # Push player back
+                self.position[2] -= overlap_z
             else:
-                self.position[2] += overlap_z  # Push player forward
+                self.position[2] += overlap_z
 
     def update_physics(self, delta_time, forward_input, right_input, min_bound, max_bound):
-        # Update velocity based on player input
         self.update_velocity(forward_input, right_input, delta_time)
-
-        # Apply gravity each frame
         self.apply_gravity(delta_time)
 
-        # Check and resolve collisions with the environment
         if self.check_collision(min_bound, max_bound):
             self.resolve_collision(min_bound, max_bound)

@@ -20,7 +20,7 @@ class ScrunkEngine:
         self.projection = self.create_projection_matrix()
         self.prog['projection'].write(self.projection)
 
-        self.player = Player([0.0, 1.0, 3.0], [0.0, 1.0, 0.0])
+        self.player = Player([0.0, 5.0, 0.0], [0.0, 1.0, 0.0])
         self.prog['view'].write(self.player.create_view_matrix())
 
         pygame.event.set_grab(True)
@@ -213,8 +213,7 @@ class ScrunkEngine:
             print("Collision detected with the top face!")
 
     def apply_gravity(self, delta_time):
-        if not self.player.grounded:
-            self.player.velocity[1] -= 9.81 * delta_time
+        self.player.velocity[1] -= 9.81 * delta_time
         self.player.position += self.player.velocity * delta_time
 
     def render(self):
