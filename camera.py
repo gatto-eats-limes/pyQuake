@@ -1,6 +1,7 @@
 import numpy as np
 from math import sin, cos, radians
 
+# fun
 class Player:
     def __init__(self, position, up_vector):
         self.position = np.array(position, dtype='f4')
