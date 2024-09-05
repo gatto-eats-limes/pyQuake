@@ -1,7 +1,7 @@
 import pygame
 import moderngl
 import numpy as np
-from camera import Player  # Adjusted to import Player class
+from camera import Player  # Ensure this imports your Player class correctly
 
 class ScrunkEngine:
     def __init__(self, width=800, height=600):
@@ -86,17 +86,64 @@ class ScrunkEngine:
             raise
 
     def create_buffers(self):
-        # Define a square (two triangles)
+        # Define a cube (6 faces, 2 triangles per face)
         vbo = self.ctx.buffer(np.array([
-             0.5,  0.5,  0.0,   0.0, 0.0, 1.0, 1.0, 0.0, 0.0,  # Vertex 0 (top right)
-            -0.5,  0.5,  0.0,   0.0, 0.0, 1.0, 0.0, 0.0, 1.0,  # Vertex 1 (top left)
-            -0.5, -0.5,  0.0,   0.0, 0.0, 1.0, 0.0, 1.0, 0.5,  # Vertex 2 (bottom left)
-             0.5, -0.5,  0.0,   0.0, 0.0, 1.0, 1.0, 1.0, 0.5,  # Vertex 3 (bottom right)
+            # Front face
+            -0.5, -0.5,  0.5,  0.0, 0.0, 1.0, 0.0, 0.0, 0.5,
+             0.5, -0.5,  0.5,  0.0, 0.0, 1.0, 1.0, 0.0, 0.5,
+             0.5,  0.5,  0.5,  0.0, 0.0, 1.0, 1.0, 1.0, 0.5,
+             0.5,  0.5,  0.5,  0.0, 0.0, 1.0, 1.0, 1.0, 0.5,
+            -0.5,  0.5,  0.5,  0.0, 0.0, 1.0, 0.0, 1.0, 0.5,
+            -0.5, -0.5,  0.5,  0.0, 0.0, 1.0, 0.0, 0.0, 0.5,
+
+            # Back face
+            -0.5, -0.5, -0.5,  0.0, 0.0, -1.0, 0.0, 0.0, 0.5,
+             0.5, -0.5, -0.5,  0.0, 0.0, -1.0, 1.0, 0.0, 0.5,
+             0.5,  0.5, -0.5,  0.0, 0.0, -1.0, 1.0, 1.0, 0.5,
+             0.5,  0.5, -0.5,  0.0, 0.0, -1.0, 1.0, 1.0, 0.5,
+            -0.5,  0.5, -0.5,  0.0, 0.0, -1.0, 0.0, 1.0, 0.5,
+            -0.5, -0.5, -0.5,  0.0, 0.0, -1.0, 0.0, 0.0, 0.5,
+
+            # Left face
+            -0.5, -0.5, -0.5,  -1.0, 0.0, 0.0, 0.0, 0.0, 0.5,
+            -0.5, -0.5,  0.5,  -1.0, 0.0, 0.0, 0.0, 0.0, 0.5,
+            -0.5,  0.5,  0.5,  -1.0, 0.0, 0.0, 0.0, 1.0, 0.5,
+            -0.5,  0.5,  0.5,  -1.0, 0.0, 0.0, 0.0, 1.0, 0.5,
+            -0.5,  0.5, -0.5,  -1.0, 0.0, 0.0, 1.0, 1.0, 0.5,
+            -0.5, -0.5, -0.5,  -1.0, 0.0, 0.0, 1.0, 0.0, 0.5,
+
+            # Right face
+             0.5, -0.5, -0.5,   1.0, 0.0, 0.0, 0.0, 0.0, 0.5,
+             0.5, -0.5,  0.5,   1.0, 0.0, 0.0, 0.0, 0.0, 0.5,
+             0.5,  0.5,  0.5,   1.0, 0.0, 0.0, 0.0, 1.0, 0.5,
+             0.5,  0.5,  0.5,   1.0, 0.0, 0.0, 0.0, 1.0, 0.5,
+             0.5,  0.5, -0.5,   1.0, 0.0, 0.0, 1.0, 1.0, 0.5,
+             0.5, -0.5, -0.5,   1.0, 0.0, 0.0, 1.0, 0.0, 0.5,
+
+            # Bottom face
+            -0.5, -0.5, -0.5,   0.0, -1.0, 0.0, 0.0, 0.0, 0.5,
+             0.5, -0.5, -0.5,   0.0, -1.0, 0.0, 1.0, 0.0, 0.5,
+             0.5, -0.5,  0.5,   0.0, -1.0, 0.0, 1.0, 1.0, 0.5,
+             0.5, -0.5,  0.5,   0.0, -1.0, 0.0, 1.0, 1.0, 0.5,
+            -0.5, -0.5,  0.5,   0.0, -1.0, 0.0, 0.0, 1.0, 0.5,
+            -0.5, -0.5, -0.5,   0.0, -1.0, 0.0, 0.0, 0.0, 0.5,
+
+            # Top face
+            -0.5,  0.5, -0.5,   0.0, 1.0, 0.0, 0.0, 0.0, 0.5,
+             0.5,  0.5, -0.5,   0.0, 1.0, 0.0, 1.0, 0.0, 0.5,
+             0.5,  0.5,  0.5,   0.0, 1.0, 0.0, 1.0, 1.0, 0.5,
+             0.5,  0.5,  0.5,   0.0, 1.0, 0.0, 1.0, 1.0, 0.5,
+            -0.5,  0.5,  0.5,   0.0, 1.0, 0.0, 0.0, 1.0, 0.5,
+            -0.5,  0.5, -0.5,   0.0, 1.0, 0.0, 0.0, 0.0, 0.5,
         ], dtype='f4').tobytes())
 
         ibo = self.ctx.buffer(np.array([
-            0, 1, 2,  # First triangle
-            0, 2, 3   # Second triangle
+            0, 1, 2,  0, 2, 3,  # Front face
+            4, 5, 6,  4, 6, 7,  # Back face
+            8, 9, 10, 8, 10, 11,  # Left face
+            12, 13, 14, 12, 14, 15,  # Right face
+            16, 17, 18, 16, 18, 19,  # Bottom face
+            20, 21, 22, 20, 22, 23   # Top face
         ], dtype='i4').tobytes())
 
         vao = self.ctx.vertex_array(self.prog, [(vbo, '3f 3f 3f', 'in_vert', 'in_normal', 'in_color')], ibo)
@@ -135,8 +182,10 @@ class ScrunkEngine:
 
         self.player.update_velocity(forward_input, right_input, delta_time)
 
+        # Jump only if the player is grounded
         if keys[pygame.K_SPACE] and self.player.grounded:
             self.player.jump()
+            self.player.grounded = False  # Set grounded to false as the player is now jumping
 
     def handle_mouse_movement(self):
         mouse_pos = pygame.mouse.get_pos()
@@ -146,14 +195,32 @@ class ScrunkEngine:
         self.center_mouse()
 
     def check_collisions(self):
-        # Define the square's collision bounds
-        min_bound = np.array([-0.5, 0, -0.5], dtype='f4')
+        # Define the cube's collision bounds
+        min_bound = np.array([-0.5, -0.5, -0.5], dtype='f4')
         max_bound = np.array([0.5, 0.5, 0.5], dtype='f4')
 
-        # Check if the player collides with the square
-        if self.player.check_collision(min_bound, max_bound):
-            # Resolve the collision by adjusting the player's position
-            self.player.resolve_collision(min_bound, max_bound)
+        # Check for collision with the top face of the cube
+        player_height = 1.0  # Assume player has height 1.0
+        player_bottom_y = self.player.position[1] - (player_height / 2)
+        player_top_y = self.player.position[1] + (player_height / 2)
+
+        cube_top_y = max_bound[1]
+
+        # Check if the player is within the horizontal bounds of the cube
+        if (player_bottom_y < cube_top_y) and (player_top_y > min_bound[1]) and \
+           (self.player.position[0] > min_bound[0] and self.player.position[0] < max_bound[0]) and \
+           (self.player.position[2] > min_bound[2] and self.player.position[2] < max_bound[2]):
+
+            # Resolve collision: Move the player on top of the cube
+            self.player.position[1] = cube_top_y + (player_height / 2)
+            self.player.velocity[1] = 0  # Reset vertical velocity upon landing
+            self.player.grounded = True  # Indicate that the player is grounded
+            print("Collision detected with the top face!")
+
+    def apply_gravity(self, delta_time):
+        if not self.player.grounded:
+            self.player.velocity[1] -= 9.81 * delta_time  # Gravity effect when not grounded
+        self.player.position += self.player.velocity * delta_time  # Update player position
 
     def run(self):
         clock = pygame.time.Clock()
@@ -171,10 +238,10 @@ class ScrunkEngine:
                         return
 
                 self.handle_input(delta_time)
-                self.player.apply_gravity(delta_time)  # Apply gravity to the player
+                self.apply_gravity(delta_time)  # Apply gravity to the player
                 self.handle_mouse_movement()
 
-                self.check_collisions()  # Check for collisions with the square
+                self.check_collisions()  # Check for collisions with the cube
 
                 self.ctx.clear(0.1, 0.1, 0.1)
                 self.ctx.clear(depth=1.0)
