@@ -3,6 +3,7 @@ import moderngl
 import numpy as np
 from camera import Player  # Ensure this imports your Player class correctly
 
+# fun
 class ScrunkEngine:
     def __init__(self, width=800, height=600):
         self.last_mouse_pos = None
