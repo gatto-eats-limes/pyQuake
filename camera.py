@@ -1,7 +1,7 @@
+# camera.py
 import numpy as np
 from math import sin, cos, radians
 
-# fun
 class Player:
     def __init__(self, position, up_vector):
         self.position = np.array(position, dtype='f4')
@@ -58,6 +58,7 @@ class Player:
             self.velocity[1] += self.gravity * delta_time
             self.position[1] += self.velocity[1] * delta_time
 
+        # Check for ground collision
         if self.position[1] <= 0:
             self.position[1] = 0
             self.grounded = True
@@ -76,10 +77,6 @@ class Player:
         # Apply friction
         self.velocity[0] *= (1.0 - self.friction)
         self.velocity[2] *= (1.0 - self.friction)
-
-        # Update position based on horizontal velocity
-        self.position[0] += self.velocity[0] * delta_time
-        self.position[2] += self.velocity[2] * delta_time
 
     def check_collision(self, min_bound, max_bound):
         player_min = np.array([self.position[0] - 0.25, self.position[1] - 0.5, self.position[2] - 0.25])
@@ -116,8 +113,11 @@ class Player:
                 self.position[2] += overlap_z
 
     def update_physics(self, delta_time, forward_input, right_input, min_bound, max_bound):
-        self.update_velocity(forward_input, right_input, delta_time)
-        self.apply_gravity(delta_time)
-
+        # Calculate future position
+        future_position = self.position + self.velocity * delta_time
+        # Check for collision with future position
         if self.check_collision(min_bound, max_bound):
             self.resolve_collision(min_bound, max_bound)
+        else:
+            self.position = future_position  # Only update position if no collision
+        self.apply_gravity(delta_time)

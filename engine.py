@@ -19,7 +19,7 @@ class ScrunkEngine:
         self.prog = self.create_program()
 
         # Create a cube instance, now handles its own texture
-        self.cube = Cube(self.ctx, self.prog, 'ryan-texture.jpg')
+        self.cube = Cube(self.ctx, self.prog)
 
         self.projection = self.create_projection_matrix()
         self.prog['projection'].write(self.projection)
