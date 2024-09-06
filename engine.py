@@ -2,8 +2,8 @@ import pygame
 import moderngl
 import numpy as np
 from camera import Player  # Ensure this imports your Player class correctly
-from cube import Cube  # Import the Cube class from the separate file
 
+# fun
 class ScrunkEngine:
     def __init__(self, width=800, height=600):
         self.width, self.height = width, height
@@ -17,10 +17,7 @@ class ScrunkEngine:
         self.ctx.enable(moderngl.DEPTH_TEST)
 
         self.prog = self.create_program()
-
-        # Create a cube instance, now handles its own texture
-        self.cube = Cube(self.ctx, self.prog)
-
+        self.vbo, self.ibo, self.vao = self.create_buffers()
         self.projection = self.create_projection_matrix()
         self.prog['projection'].write(self.projection)
 
@@ -38,11 +35,10 @@ class ScrunkEngine:
                 #version 330
                 in vec3 in_vert;
                 in vec3 in_normal;
-                in vec2 in_texcoord;
-
+                in vec3 in_color;
+                out vec3 fragColor;
                 out vec3 fragNormal;
                 out vec3 fragPosition;
-                out vec2 fragTexcoord;
 
                 uniform mat4 model;
                 uniform mat4 view;
@@ -51,33 +47,31 @@ class ScrunkEngine:
                 void main() {
                     vec4 worldPosition = model * vec4(in_vert, 1.0);
                     gl_Position = projection * view * worldPosition;
+                    fragColor = in_color;
                     fragNormal = normalize(mat3(model) * in_normal);
                     fragPosition = vec3(worldPosition);
-                    fragTexcoord = in_texcoord;
                 }
                 """,
                 fragment_shader="""
                 #version 330
+                in vec3 fragColor;
                 in vec3 fragNormal;
                 in vec3 fragPosition;
-                in vec2 fragTexcoord;
-
                 out vec4 fragColorOut;
 
                 uniform vec3 lightPos;
                 uniform vec3 viewPos;
-                uniform sampler2D texture1;
 
                 void main() {
                     vec3 lightDir = normalize(lightPos - fragPosition);
                     vec3 norm = normalize(fragNormal);
 
                     // Ambient light
-                    vec3 ambient = vec3(0.2);
+                    vec3 ambient = 0.2 * fragColor;
 
                     // Diffuse light
                     float diff = max(dot(norm, lightDir), 0.0);
-                    vec3 diffuse = diff * vec3(1.0);
+                    vec3 diffuse = diff * fragColor;
 
                     // Specular light
                     vec3 viewDir = normalize(viewPos - fragPosition);
@@ -85,10 +79,9 @@ class ScrunkEngine:
                     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
                     vec3 specular = spec * vec3(1.0); // White specular light
 
-                    // Combine lighting result with texture
+                    // Combine results
                     vec3 result = ambient + diffuse + specular;
-                    vec4 textureColor = texture(texture1, fragTexcoord);
-                    fragColorOut = vec4(result, 1.0) * textureColor;
+                    fragColorOut = vec4(result, 1.0);
                 }
                 """
             )
@@ -97,6 +90,66 @@ class ScrunkEngine:
         except Exception as e:
             print("Shader compilation failed:", e)
             raise
+
+    def create_buffers(self):
+        vertices = np.array([
+            # Front face
+            -0.5, -0.5,  0.5,  0.0, 0.0, 1.0, 1.0, 0.0, 0.0,  # Vertex data: x, y, z, nx, ny, nz, r, g, b
+             0.5, -0.5,  0.5,  0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
+             0.5,  0.5,  0.5,  0.0, 0.0, 1.0, 0.0, 0.0, 1.0,
+            -0.5,  0.5,  0.5,  0.0, 0.0, 1.0, 1.0, 1.0, 0.0,
+
+            # Back face
+            -0.5, -0.5, -0.5,  0.0, 0.0, -1.0, 1.0, 0.0, 1.0,
+             0.5, -0.5, -0.5,  0.0, 0.0, -1.0, 1.0, 1.0, 1.0,
+             0.5,  0.5, -0.5,  0.0, 0.0, -1.0, 0.0, 1.0, 1.0,
+            -0.5,  0.5, -0.5,  0.0, 0.0, -1.0, 1.0, 1.0, 0.0,
+
+            # Left face
+            -0.5, -0.5, -0.5, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+            -0.5, -0.5,  0.5, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+            -0.5,  0.5,  0.5, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+            -0.5,  0.5, -0.5, -1.0, 0.0, 0.0, 1.0, 0.0, 1.0,
+
+            # Right face
+            0.5, -0.5, -0.5,  1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+            0.5, -0.5,  0.5,  1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+            0.5,  0.5,  0.5,  1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+            0.5,  0.5, -0.5,  1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+
+            # Top face
+            -0.5, 0.5, -0.5,  0.0, 1.0, 0.0, 1.0, 0.0, 0.0,
+             0.5, 0.5, -0.5,  0.0, 1.0, 0.0, 1.0, 1.0, 0.0,
+             0.5, 0.5,  0.5,  0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
+            -0.5, 0.5,  0.5,  0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
+
+            # Bottom face
+            -0.5, -0.5, -0.5,  0.0, -1.0, 0.0, 1.0, 0.0, 0.0,
+             0.5, -0.5, -0.5,  0.0, -1.0, 0.0, 1.0, 1.0, 0.0,
+             0.5, -0.5,  0.5,  0.0, -1.0, 0.0, 0.0, 1.0, 0.0,
+            -0.5, -0.5,  0.5,  0.0, -1.0, 0.0, 0.0, 0.0, 1.0,
+        ], dtype='f4')
+
+        indices = np.array([
+            # Front face
+            0, 1, 2, 0, 2, 3,
+            # Back face
+            4, 5, 6, 4, 6, 7,
+            # Left face
+            8, 9, 10, 8, 10, 11,
+            # Right face
+            12, 13, 14, 12, 14, 15,
+            # Top face
+            16, 17, 18, 16, 18, 19,
+            # Bottom face
+            20, 21, 22, 20, 22, 23,
+        ], dtype='i4')
+
+        vbo = self.ctx.buffer(vertices.tobytes())
+        ibo = self.ctx.buffer(indices.tobytes())
+
+        vao = self.ctx.vertex_array(self.prog, [(vbo, '3f 3f 3f', 'in_vert', 'in_normal', 'in_color')], ibo)
+        return vbo, ibo, vao
 
     def create_projection_matrix(self):
         aspect_ratio = self.width / self.height
@@ -170,10 +223,7 @@ class ScrunkEngine:
         self.prog['model'].write(np.identity(4, dtype='f4'))
         self.prog['lightPos'].value = (2.0, 2.0, 2.0)
         self.prog['viewPos'].value = tuple(self.player.position)
-
-        # Render the cube (the Cube class now handles texture internally)
-        self.cube.render()
-
+        self.vao.render(moderngl.TRIANGLES)
         pygame.display.flip()
 
     def main_loop(self):

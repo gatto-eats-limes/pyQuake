@@ -1,4 +1,3 @@
-# camera.py
 import numpy as np
 from math import sin, cos, radians
 
@@ -11,7 +10,7 @@ class Player:
         self.front = np.array([0.0, 0.0, -1.0], dtype='f4')
         self.speed = 5.0
         self.jump_force = 2.8
-        self.grounded = True
+        self.grounded = False
         self.gravity = -9.81
         self.velocity = np.array([0.0, 0.0, 0.0], dtype='f4')
         self.friction = 0.1
@@ -58,12 +57,6 @@ class Player:
             self.velocity[1] += self.gravity * delta_time
             self.position[1] += self.velocity[1] * delta_time
 
-        # Check for ground collision
-        if self.position[1] <= 0:
-            self.position[1] = 0
-            self.grounded = True
-            self.velocity[1] = 0
-
     def update_velocity(self, forward_input, right_input, delta_time):
         forward_acceleration = self.acceleration * forward_input
         right_acceleration = self.acceleration * right_input
@@ -78,15 +71,17 @@ class Player:
         self.velocity[0] *= (1.0 - self.friction)
         self.velocity[2] *= (1.0 - self.friction)
 
+        # Update position based on horizontal velocity
+        self.position[0] += self.velocity[0] * delta_time
+        self.position[2] += self.velocity[2] * delta_time
+
     def check_collision(self, min_bound, max_bound):
         player_min = np.array([self.position[0] - 0.25, self.position[1] - 0.5, self.position[2] - 0.25])
         player_max = np.array([self.position[0] + 0.25, self.position[1] + 0.5, self.position[2] + 0.25])
 
-        if (player_min[0] < max_bound[0] and player_max[0] > min_bound[0] and
-            player_min[1] < max_bound[1] and player_max[1] > min_bound[1] and
-            player_min[2] < max_bound[2] and player_max[2] > min_bound[2]):
-            return True
-        return False
+        return (player_min[0] < max_bound[0] and player_max[0] > min_bound[0] and
+                player_min[1] < max_bound[1] and player_max[1] > min_bound[1] and
+                player_min[2] < max_bound[2] and player_max[2] > min_bound[2])
 
     def resolve_collision(self, min_bound, max_bound):
         player_min = np.array([self.position[0] - 0.25, self.position[1] - 0.5, self.position[2] - 0.25])
@@ -104,6 +99,7 @@ class Player:
         elif overlap_y < overlap_x and overlap_y < overlap_z:
             if self.position[1] < (min_bound[1] + max_bound[1]) / 2:
                 self.position[1] -= overlap_y
+                self.grounded = True  # Set grounded when colliding from above
             else:
                 self.position[1] += overlap_y
         else:
@@ -113,11 +109,8 @@ class Player:
                 self.position[2] += overlap_z
 
     def update_physics(self, delta_time, forward_input, right_input, min_bound, max_bound):
-        # Calculate future position
-        future_position = self.position + self.velocity * delta_time
-        # Check for collision with future position
+        self.update_velocity(forward_input, right_input, delta_time)
+        self.apply_gravity(delta_time)
+
         if self.check_collision(min_bound, max_bound):
             self.resolve_collision(min_bound, max_bound)
-        else:
-            self.position = future_position  # Only update position if no collision
-        self.apply_gravity(delta_time)
