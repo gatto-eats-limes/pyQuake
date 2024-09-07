@@ -1,6 +1,7 @@
 import pygame
 import moderngl
 import numpy as np
+from PIL import Image  # Used for loading textures
 from camera import Player  # Ensure this imports your Player class correctly
 
 class ScrunkEngine:
@@ -10,13 +11,15 @@ class ScrunkEngine:
 
         pygame.init()
         pygame.display.set_mode((self.width, self.height), pygame.DOUBLEBUF | pygame.OPENGL)
-        pygame.display.set_caption("3D Cube with Camera", "")
+        pygame.display.set_caption("ryan manning 3D engine", "")
 
         self.ctx = moderngl.create_context()
         self.ctx.enable(moderngl.DEPTH_TEST)
 
         self.prog = self.create_program()
         self.vbo, self.ibo, self.vao = self.create_buffers()
+        self.texture = self.load_texture("ryan-manning.jpg")  # Load the texture
+
         self.projection = self.create_projection_matrix()
         self.prog['projection'].write(self.projection)
 
@@ -47,43 +50,50 @@ class ScrunkEngine:
         with open(filepath, 'r') as file:
             return file.read()
 
+    def load_texture(self, filepath):
+        """Loads texture using PIL and binds it to the OpenGL context."""
+        img = Image.open(filepath).transpose(Image.FLIP_TOP_BOTTOM).convert("RGB")
+        texture = self.ctx.texture(img.size, 3, img.tobytes())
+        texture.use(0)  # Bind to texture unit 0
+        return texture
+
     def create_buffers(self):
         vertices = np.array([
             # Front face
-            -0.5, -0.5,  0.5,  0.0, 0.0, 1.0, 1.0, 0.0, 0.0,  # Vertex data: x, y, z, nx, ny, nz, r, g, b
-             0.5, -0.5,  0.5,  0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
-             0.5,  0.5,  0.5,  0.0, 0.0, 1.0, 0.0, 0.0, 1.0,
-            -0.5,  0.5,  0.5,  0.0, 0.0, 1.0, 1.0, 1.0, 0.0,
+            -0.5, -0.5,  0.5,  0.0, 0.0, 1.0,  0.0, 0.0,  # Vertex data: x, y, z, nx, ny, nz, u, v
+             0.5, -0.5,  0.5,  0.0, 0.0, 1.0,  1.0, 0.0,
+             0.5,  0.5,  0.5,  0.0, 0.0, 1.0,  1.0, 1.0,
+            -0.5,  0.5,  0.5,  0.0, 0.0, 1.0,  0.0, 1.0,
 
             # Back face
-            -0.5, -0.5, -0.5,  0.0, 0.0, -1.0, 1.0, 0.0, 1.0,
-             0.5, -0.5, -0.5,  0.0, 0.0, -1.0, 1.0, 1.0, 1.0,
-             0.5,  0.5, -0.5,  0.0, 0.0, -1.0, 0.0, 1.0, 1.0,
-            -0.5,  0.5, -0.5,  0.0, 0.0, -1.0, 1.0, 1.0, 0.0,
+            -0.5, -0.5, -0.5,  0.0, 0.0, -1.0,  1.0, 0.0,
+             0.5, -0.5, -0.5,  0.0, 0.0, -1.0,  0.0, 0.0,
+             0.5,  0.5, -0.5,  0.0, 0.0, -1.0,  0.0, 1.0,
+            -0.5,  0.5, -0.5,  0.0, 0.0, -1.0,  1.0, 1.0,
 
             # Left face
-            -0.5, -0.5, -0.5, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-            -0.5, -0.5,  0.5, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-            -0.5,  0.5,  0.5, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-            -0.5,  0.5, -0.5, -1.0, 0.0, 0.0, 1.0, 0.0, 1.0,
+            -0.5, -0.5, -0.5, -1.0, 0.0, 0.0,  0.0, 0.0,
+            -0.5, -0.5,  0.5, -1.0, 0.0, 0.0,  1.0, 0.0,
+            -0.5,  0.5,  0.5, -1.0, 0.0, 0.0,  1.0, 1.0,
+            -0.5,  0.5, -0.5, -1.0, 0.0, 0.0,  0.0, 1.0,
 
             # Right face
-            0.5, -0.5, -0.5,  1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-            0.5, -0.5,  0.5,  1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-            0.5,  0.5,  0.5,  1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-            0.5,  0.5, -0.5,  1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+            0.5, -0.5, -0.5,  1.0, 0.0, 0.0,  0.0, 0.0,
+            0.5, -0.5,  0.5,  1.0, 0.0, 0.0,  1.0, 0.0,
+            0.5,  0.5,  0.5,  1.0, 0.0, 0.0,  1.0, 1.0,
+            0.5,  0.5, -0.5,  1.0, 0.0, 0.0,  0.0, 1.0,
 
             # Top face
-            -0.5, 0.5, -0.5,  0.0, 1.0, 0.0, 1.0, 0.0, 0.0,
-             0.5, 0.5, -0.5,  0.0, 1.0, 0.0, 1.0, 1.0, 0.0,
-             0.5, 0.5,  0.5,  0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
-            -0.5, 0.5,  0.5,  0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
+            -0.5, 0.5, -0.5,  0.0, 1.0, 0.0,  0.0, 1.0,
+             0.5, 0.5, -0.5,  0.0, 1.0, 0.0,  1.0, 1.0,
+             0.5, 0.5,  0.5,  0.0, 1.0, 0.0,  1.0, 0.0,
+            -0.5, 0.5,  0.5,  0.0, 1.0, 0.0,  0.0, 0.0,
 
             # Bottom face
-            -0.5, -0.5, -0.5,  0.0, -1.0, 0.0, 1.0, 0.0, 0.0,
-             0.5, -0.5, -0.5,  0.0, -1.0, 0.0, 1.0, 1.0, 0.0,
-             0.5, -0.5,  0.5,  0.0, -1.0, 0.0, 0.0, 1.0, 0.0,
-            -0.5, -0.5,  0.5,  0.0, -1.0, 0.0, 0.0, 0.0, 1.0,
+            -0.5, -0.5, -0.5,  0.0, -1.0, 0.0,  0.0, 0.0,
+             0.5, -0.5, -0.5,  0.0, -1.0, 0.0,  1.0, 0.0,
+             0.5, -0.5,  0.5,  0.0, -1.0, 0.0,  1.0, 1.0,
+            -0.5, -0.5,  0.5,  0.0, -1.0, 0.0,  0.0, 1.0,
         ], dtype='f4')
 
         indices = np.array([
@@ -104,7 +114,7 @@ class ScrunkEngine:
         vbo = self.ctx.buffer(vertices.tobytes())
         ibo = self.ctx.buffer(indices.tobytes())
 
-        vao = self.ctx.vertex_array(self.prog, [(vbo, '3f 3f 3f', 'in_vert', 'in_normal', 'in_color')], ibo)
+        vao = self.ctx.vertex_array(self.prog, [(vbo, '3f 3f 2f', 'in_vert', 'in_normal', 'in_uv')], ibo)
         return vbo, ibo, vao
 
     def create_projection_matrix(self):
@@ -168,6 +178,8 @@ class ScrunkEngine:
         self.prog['model'].write(np.identity(4, dtype='f4'))
         self.prog['lightPos'].value = (2.0, 2.0, 2.0)
         self.prog['viewPos'].value = tuple(self.player.position)
+
+        self.texture.use(0)  # Bind texture before rendering
         self.vao.render(moderngl.TRIANGLES)
         pygame.display.flip()
 
