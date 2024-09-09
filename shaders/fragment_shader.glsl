@@ -1,36 +1,36 @@
 #version 330
 
-in vec2 fragUV;         // Texture coordinates from the vertex shader
-in vec3 fragNormal;     // Normal from the vertex shader
-in vec3 fragPosition;   // World-space position from the vertex shader
-out vec4 fragColorOut;  // Final fragment color output
+in vec2 fragUV;          // Texture coordinates
+in vec3 fragNormal;      // Transformed normal
+in vec3 fragPosition;    // World position
 
-uniform sampler2D texture0;  // Texture sampler
-uniform vec3 lightPos;       // Light position
-uniform vec3 viewPos;        // Camera position
+out vec4 fragColorOut;   // Final output color
+
+uniform sampler2D texture0; // Texture sampler
+uniform vec3 lightPos;      // Light source position
+uniform vec3 viewPos;       // Camera position
 
 void main() {
-    // Sample the texture color
     vec3 texColor = texture(texture0, fragUV).rgb;
 
-    // Lighting calculations
     vec3 lightDir = normalize(lightPos - fragPosition);
     vec3 norm = normalize(fragNormal);
+    vec3 viewDir = normalize(viewPos - fragPosition);
 
-    // Ambient lighting
+    float levels = 4.0;
+    float scale = 1.0 / levels;
+
     vec3 ambient = 0.2 * texColor;
 
-    // Diffuse lighting
     float diff = max(dot(norm, lightDir), 0.0);
+    diff = floor(diff / scale) * scale;  // Step-based lighting for toon shading
     vec3 diffuse = diff * texColor;
 
-    // Specular lighting (Phong reflection model)
-    vec3 viewDir = normalize(viewPos - fragPosition);
     vec3 reflectDir = reflect(-lightDir, norm);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
-    vec3 specular = spec * vec3(1.0); // White specular light
+    spec = floor(spec / scale) * scale;  // Step-based specular for toon shading
+    vec3 specular = spec * vec3(1.0);  // White specular
 
-    // Combine the results
     vec3 result = ambient + diffuse + specular;
-    fragColorOut = vec4(result, 1.0);  // Output final color with full opacity
+    fragColorOut = vec4(result, 1.0);
 }

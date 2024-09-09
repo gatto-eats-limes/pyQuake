@@ -119,7 +119,7 @@ class ScrunkEngine:
 
     def create_projection_matrix(self):
         aspect_ratio = self.width / self.height
-        fov = 50.0
+        fov = 90.0  # Increase FOV for a more dynamic perspective
         near, far = 0.1, 100.0
         f = 1.0 / np.tan(np.radians(fov) / 2.0)
         return np.array([
@@ -128,6 +128,14 @@ class ScrunkEngine:
             [0, 0, (far + near) / (near - far), -1],
             [0, 0, (2 * far * near) / (near - far), 0]
         ], dtype='f4')
+
+    def setup_framebuffer(self, low_res_width, low_res_height):
+        # Create a texture to render the scene into (low-resolution)
+        self.fb_texture = self.ctx.texture((low_res_width, low_res_height), 4)
+        self.fb_texture.filter = (moderngl.NEAREST, moderngl.NEAREST)  # Nearest filtering for pixelation
+
+        # Create a framebuffer using this texture
+        self.framebuffer = self.ctx.framebuffer(color_attachments=[self.fb_texture])
 
     def center_mouse(self):
         pygame.mouse.set_pos(self.width // 2, self.height // 2)
