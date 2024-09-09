@@ -1,8 +1,8 @@
 import pygame
 import moderngl
 import numpy as np
-from PIL import Image  # Used for loading textures
-from camera import Player  # Ensure this imports your Player class correctly
+from camera import Player
+from platform import Platform
 
 class ScrunkEngine:
     def __init__(self, width=800, height=600):
@@ -11,115 +11,24 @@ class ScrunkEngine:
 
         pygame.init()
         pygame.display.set_mode((self.width, self.height), pygame.DOUBLEBUF | pygame.OPENGL)
-        pygame.display.set_caption("ryan manning 3D engine", "")
+        pygame.display.set_caption("Ryan Manning 3D Engine")
 
         self.ctx = moderngl.create_context()
         self.ctx.enable(moderngl.DEPTH_TEST)
 
-        self.prog = self.create_program()
-        self.vbo, self.ibo, self.vao = self.create_buffers()
-        self.texture = self.load_texture("ryan-manning.jpg")  # Load the texture
-
-        self.projection = self.create_projection_matrix()
-        self.prog['projection'].write(self.projection)
-
         self.player = Player([0.0, 5.0, 0.0], [0.0, 1.0, 0.0])
-        self.prog['view'].write(self.player.create_view_matrix())
+        self.projection = self.create_projection_matrix()
+        self.light_pos = np.array([10.0, 10.0, 10.0], dtype='f4')
+
+        self.platform = Platform(self.ctx, "ryan-manning.jpg")
 
         pygame.event.set_grab(True)
         pygame.mouse.set_visible(False)
         self.center_mouse()
 
-    def create_program(self):
-        try:
-            vertex_shader = self.load_shader("shaders/vertex_shader.glsl")
-            fragment_shader = self.load_shader("shaders/fragment_shader.glsl")
-
-            prog = self.ctx.program(
-                vertex_shader=vertex_shader,
-                fragment_shader=fragment_shader
-            )
-            return prog
-
-        except Exception as e:
-            print("Shader compilation failed:", e)
-            raise
-
-    def load_shader(self, filepath):
-        """Loads shader code from an external file."""
-        with open(filepath, 'r') as file:
-            return file.read()
-
-    def load_texture(self, filepath):
-        """Loads texture using PIL and binds it to the OpenGL context."""
-        img = Image.open(filepath).transpose(Image.FLIP_TOP_BOTTOM).convert("RGB")
-        texture = self.ctx.texture(img.size, 3, img.tobytes())
-        texture.use(0)  # Bind to texture unit 0
-        return texture
-
-    def create_buffers(self):
-        vertices = np.array([
-            # Front face
-            -0.5, -0.5,  0.5,  0.0, 0.0, 1.0,  0.0, 0.0,  # Vertex data: x, y, z, nx, ny, nz, u, v
-             0.5, -0.5,  0.5,  0.0, 0.0, 1.0,  1.0, 0.0,
-             0.5,  0.5,  0.5,  0.0, 0.0, 1.0,  1.0, 1.0,
-            -0.5,  0.5,  0.5,  0.0, 0.0, 1.0,  0.0, 1.0,
-
-            # Back face
-            -0.5, -0.5, -0.5,  0.0, 0.0, -1.0,  1.0, 0.0,
-             0.5, -0.5, -0.5,  0.0, 0.0, -1.0,  0.0, 0.0,
-             0.5,  0.5, -0.5,  0.0, 0.0, -1.0,  0.0, 1.0,
-            -0.5,  0.5, -0.5,  0.0, 0.0, -1.0,  1.0, 1.0,
-
-            # Left face
-            -0.5, -0.5, -0.5, -1.0, 0.0, 0.0,  0.0, 0.0,
-            -0.5, -0.5,  0.5, -1.0, 0.0, 0.0,  1.0, 0.0,
-            -0.5,  0.5,  0.5, -1.0, 0.0, 0.0,  1.0, 1.0,
-            -0.5,  0.5, -0.5, -1.0, 0.0, 0.0,  0.0, 1.0,
-
-            # Right face
-            0.5, -0.5, -0.5,  1.0, 0.0, 0.0,  0.0, 0.0,
-            0.5, -0.5,  0.5,  1.0, 0.0, 0.0,  1.0, 0.0,
-            0.5,  0.5,  0.5,  1.0, 0.0, 0.0,  1.0, 1.0,
-            0.5,  0.5, -0.5,  1.0, 0.0, 0.0,  0.0, 1.0,
-
-            # Top face
-            -0.5, 0.5, -0.5,  0.0, 1.0, 0.0,  0.0, 1.0,
-             0.5, 0.5, -0.5,  0.0, 1.0, 0.0,  1.0, 1.0,
-             0.5, 0.5,  0.5,  0.0, 1.0, 0.0,  1.0, 0.0,
-            -0.5, 0.5,  0.5,  0.0, 1.0, 0.0,  0.0, 0.0,
-
-            # Bottom face
-            -0.5, -0.5, -0.5,  0.0, -1.0, 0.0,  0.0, 0.0,
-             0.5, -0.5, -0.5,  0.0, -1.0, 0.0,  1.0, 0.0,
-             0.5, -0.5,  0.5,  0.0, -1.0, 0.0,  1.0, 1.0,
-            -0.5, -0.5,  0.5,  0.0, -1.0, 0.0,  0.0, 1.0,
-        ], dtype='f4')
-
-        indices = np.array([
-            # Front face
-            0, 1, 2, 0, 2, 3,
-            # Back face
-            4, 5, 6, 4, 6, 7,
-            # Left face
-            8, 9, 10, 8, 10, 11,
-            # Right face
-            12, 13, 14, 12, 14, 15,
-            # Top face
-            16, 17, 18, 16, 18, 19,
-            # Bottom face
-            20, 21, 22, 20, 22, 23,
-        ], dtype='i4')
-
-        vbo = self.ctx.buffer(vertices.tobytes())
-        ibo = self.ctx.buffer(indices.tobytes())
-
-        vao = self.ctx.vertex_array(self.prog, [(vbo, '3f 3f 2f', 'in_vert', 'in_normal', 'in_uv')], ibo)
-        return vbo, ibo, vao
-
     def create_projection_matrix(self):
         aspect_ratio = self.width / self.height
-        fov = 90.0  # Increase FOV for a more dynamic perspective
+        fov = 90.0
         near, far = 0.1, 100.0
         f = 1.0 / np.tan(np.radians(fov) / 2.0)
         return np.array([
@@ -128,14 +37,6 @@ class ScrunkEngine:
             [0, 0, (far + near) / (near - far), -1],
             [0, 0, (2 * far * near) / (near - far), 0]
         ], dtype='f4')
-
-    def setup_framebuffer(self, low_res_width, low_res_height):
-        # Create a texture to render the scene into (low-resolution)
-        self.fb_texture = self.ctx.texture((low_res_width, low_res_height), 4)
-        self.fb_texture.filter = (moderngl.NEAREST, moderngl.NEAREST)  # Nearest filtering for pixelation
-
-        # Create a framebuffer using this texture
-        self.framebuffer = self.ctx.framebuffer(color_attachments=[self.fb_texture])
 
     def center_mouse(self):
         pygame.mouse.set_pos(self.width // 2, self.height // 2)
@@ -147,13 +48,13 @@ class ScrunkEngine:
         right_input = 0
 
         if keys[pygame.K_a]:
-            right_input = -1  # Move left
+            right_input = -1
         if keys[pygame.K_d]:
-            right_input = 1   # Move right
+            right_input = 1
         if keys[pygame.K_w]:
-            forward_input = 1  # Move forward
+            forward_input = 1
         if keys[pygame.K_s]:
-            forward_input = -1  # Move backward
+            forward_input = -1
 
         self.player.update_velocity(forward_input, right_input, delta_time)
 
@@ -168,27 +69,22 @@ class ScrunkEngine:
         self.player.process_mouse_movement(x_offset, y_offset)
         self.center_mouse()
 
-    def check_collisions(self):
-        min_bound = np.array([-0.5, -0.5, -0.5], dtype='f4')
-        max_bound = np.array([0.5, 0.5, 0.5], dtype='f4')
-
-        if self.player.check_collision(min_bound, max_bound):
-            self.player.resolve_collision(min_bound, max_bound)
-            print("Collision detected and resolved.")
-
     def apply_gravity(self, delta_time):
-        self.player.velocity[1] -= 9.81 * delta_time
-        self.player.position += self.player.velocity * delta_time
+        self.player.apply_gravity(delta_time)
 
     def render(self):
         self.ctx.clear(0.1, 0.1, 0.1)
-        self.prog['view'].write(self.player.create_view_matrix())
-        self.prog['model'].write(np.identity(4, dtype='f4'))
-        self.prog['lightPos'].value = (2.0, 2.0, 2.0)
-        self.prog['viewPos'].value = tuple(self.player.position)
 
-        self.texture.use(0)  # Bind texture before rendering
-        self.vao.render(moderngl.TRIANGLES)
+        # Bind the projection and view matrices
+        self.player.view_matrix = self.player.create_view_matrix()
+        program = self.platform.vao.program
+        program['view'].write(self.player.view_matrix.tobytes())
+        program['projection'].write(self.projection.tobytes())
+
+        # Render the platform
+        model_matrix = np.eye(4, dtype='f4')  # Identity matrix for now
+        self.platform.render(program, model_matrix, self.light_pos)
+
         pygame.display.flip()
 
     def main_loop(self):
@@ -205,7 +101,10 @@ class ScrunkEngine:
             self.handle_input(delta_time)
             self.handle_mouse_movement()
             self.apply_gravity(delta_time)
-            self.check_collisions()
+
+            # Check collision with the platform
+            if self.platform.check_collision(self.player):
+                self.player.grounded = True  # Set grounded state or handle collision response
 
             self.render()
 

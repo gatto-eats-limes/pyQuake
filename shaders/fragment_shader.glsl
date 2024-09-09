@@ -1,4 +1,4 @@
-#version 330
+#version 330 core
 
 in vec2 fragUV;          // Texture coordinates
 in vec3 fragNormal;      // Transformed normal
@@ -8,29 +8,18 @@ out vec4 fragColorOut;   // Final output color
 
 uniform sampler2D texture0; // Texture sampler
 uniform vec3 lightPos;      // Light source position
-uniform vec3 viewPos;       // Camera position
 
 void main() {
-    vec3 texColor = texture(texture0, fragUV).rgb;
+    vec3 texColor = texture(texture0, fragUV).rgb; // Sample the texture using UV coordinates
 
-    vec3 lightDir = normalize(lightPos - fragPosition);
-    vec3 norm = normalize(fragNormal);
-    vec3 viewDir = normalize(viewPos - fragPosition);
+    vec3 lightDir = normalize(lightPos - fragPosition); // Direction to light source
+    vec3 norm = normalize(fragNormal); // Normal at the fragment
 
-    float levels = 4.0;
-    float scale = 1.0 / levels;
+    // Ambient and diffuse lighting
+    vec3 ambient = 0.2 * texColor; // Ambient light contribution
+    float diff = max(dot(norm, lightDir), 0.0); // Diffuse lighting factor
+    vec3 diffuse = diff * texColor; // Diffuse contribution
 
-    vec3 ambient = 0.2 * texColor;
-
-    float diff = max(dot(norm, lightDir), 0.0);
-    diff = floor(diff / scale) * scale;  // Step-based lighting for toon shading
-    vec3 diffuse = diff * texColor;
-
-    vec3 reflectDir = reflect(-lightDir, norm);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
-    spec = floor(spec / scale) * scale;  // Step-based specular for toon shading
-    vec3 specular = spec * vec3(1.0);  // White specular
-
-    vec3 result = ambient + diffuse + specular;
-    fragColorOut = vec4(result, 1.0);
+    vec3 result = ambient + diffuse; // Final color
+    fragColorOut = vec4(result, 1.0); // Set the output color
 }
