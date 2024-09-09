@@ -20,7 +20,7 @@ class RyanEngine:
         self.projection = self.create_projection_matrix()
         self.light_pos = np.array([10.0, 10.0, 10.0], dtype='f4')
 
-        self.platforms = [Platform(self.ctx, "ryan-manning.jpg")]
+        self.platforms = [Platform(self.ctx, "placeholder_top.png")]
         # Add more platforms or collidable objects to the list
         # self.platforms.append(AnotherPlatform(self.ctx, "another-image.jpg"))
 
