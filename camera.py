@@ -11,13 +11,13 @@ class Player:
         self.front = np.array([0.0, 0.0, -1.0], dtype='f4')  # Initial forward direction
 
         # Player movement attributes
-        self.speed = 24.0  # Increased movement speed
+        self.speed = 36.0  # Increased movement speed
         self.jump_force = 8.0  # Higher jump force for more vertical mobility
         self.grounded = False
         self.gravity = -20.0  # Increased gravity for faster falling
         self.velocity = np.array([0.0, 0.0, 0.0], dtype='f4')
-        self.friction = 0.2  # Lower friction for more slide
-        self.acceleration = 38.0  # Increased acceleration for quicker movement responsiveness
+        self.friction = 0.3  # Lower friction for more slide
+        self.acceleration = 48.0  # Increased acceleration for quicker movement responsiveness
 
         # Player size attributes
         self.width = 0.5  # Width of the player for collision detection
