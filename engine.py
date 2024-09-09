@@ -4,7 +4,7 @@ import numpy as np
 from camera import Player
 from platform import Platform
 
-class ScrunkEngine:
+class RyanEngine:
     def __init__(self, width=800, height=600):
         self.width, self.height = width, height
         self.last_mouse_pos = None
@@ -122,5 +122,5 @@ class ScrunkEngine:
         pygame.quit()
 
 if __name__ == "__main__":
-    engine = ScrunkEngine()
+    engine = RyanEngine()
     engine.main_loop()
