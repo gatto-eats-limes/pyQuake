@@ -20,7 +20,9 @@ class ScrunkEngine:
         self.projection = self.create_projection_matrix()
         self.light_pos = np.array([10.0, 10.0, 10.0], dtype='f4')
 
-        self.platform = Platform(self.ctx, "ryan-manning.jpg")
+        self.platforms = [Platform(self.ctx, "ryan-manning.jpg")]
+        # Add more platforms or collidable objects to the list
+        # self.platforms.append(AnotherPlatform(self.ctx, "another-image.jpg"))
 
         pygame.event.set_grab(True)
         pygame.mouse.set_visible(False)
@@ -77,15 +79,25 @@ class ScrunkEngine:
 
         # Bind the projection and view matrices
         self.player.view_matrix = self.player.create_view_matrix()
-        program = self.platform.vao.program
+        program = self.platforms[0].vao.program  # Assuming you're using the first platform
         program['view'].write(self.player.view_matrix.tobytes())
         program['projection'].write(self.projection.tobytes())
 
-        # Render the platform
-        model_matrix = np.eye(4, dtype='f4')  # Identity matrix for now
-        self.platform.render(program, model_matrix, self.light_pos)
+        # Render each platform or collidable object
+        for platform in self.platforms:
+            model_matrix = np.eye(4, dtype='f4')  # Identity matrix for now
+            platform.render(program, model_matrix, self.light_pos)
 
         pygame.display.flip()
+
+    def check_collisions(self):
+        """Check for collisions with all platforms."""
+        for platform in self.platforms:
+            if platform.check_collision(self.player):
+                self.player.grounded = True  # Set grounded state or handle collision response
+                break  # Exit after finding a collision, if you want to apply grounded state for any collision
+        else:
+            self.player.grounded = False  # Reset grounded state if no collision is detected
 
     def main_loop(self):
         clock = pygame.time.Clock()
@@ -102,9 +114,8 @@ class ScrunkEngine:
             self.handle_mouse_movement()
             self.apply_gravity(delta_time)
 
-            # Check collision with the platform
-            if self.platform.check_collision(self.player):
-                self.player.grounded = True  # Set grounded state or handle collision response
+            # Check collision with all platforms
+            self.check_collisions()
 
             self.render()
 
