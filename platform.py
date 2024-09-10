@@ -4,7 +4,7 @@ import moderngl
 
 
 class Platform:
-    def __init__(self, ctx, texture_path, side_texture_paths=None, width=8.0, length=8.0, height=1.0,
+    def __init__(self, ctx, texture_path, side_texture_path=None, width=8.0, length=8.0, height=1.0,
                  tile_factor=(8.0, 8.0)):
         self.width = width
         self.length = length
@@ -14,10 +14,9 @@ class Platform:
         self.min_bound = np.array([-self.width / 2, 0, -self.length / 2], dtype='f4')
         self.max_bound = np.array([self.width / 2, self.height, self.length / 2], dtype='f4')
 
-        # Load the main texture and side textures
+        # Load the main texture and side texture
         self.texture = self.load_texture(ctx, texture_path)
-        self.side_textures = [self.load_texture(ctx, path) for path in side_texture_paths] if side_texture_paths else [
-                                                                                                                          self.texture] * 4
+        self.side_texture = self.load_texture(ctx, side_texture_path) if side_texture_path else self.texture
         self.vbo, self.ibo, self.vao = self.create_buffers(ctx)
 
     def load_texture(self, ctx, filepath):
@@ -161,9 +160,8 @@ class Platform:
         self.texture.use(0)
         self.vao.render(moderngl.TRIANGLES)
 
-        # Bind the side textures for the side faces
-        for i, side_texture in enumerate(self.side_textures):
-            side_texture.use(i + 1)  # Use different texture units for each side
+        # Bind the side texture for all side faces
+        self.side_texture.use(1)
 
         # Render the side faces separately
         program['in_uv'].value = (0, 0)  # Reset texture coordinates if needed

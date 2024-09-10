@@ -12,7 +12,7 @@ class Player:
 
         # Player movement attributes
         self.speed = 36.0  # Increased movement speed
-        self.jump_force = 4.0  # Higher jump force for more vertical mobility
+        self.jump_force = 4.8  # Higher jump force for more vertical mobility
         self.grounded = False
         self.gravity = -9.81  # Increased gravity for faster falling
         self.velocity = np.array([0.0, 0.0, 0.0], dtype='f4')
