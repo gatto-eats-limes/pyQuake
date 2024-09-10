@@ -16,7 +16,7 @@ void main() {
     vec3 norm = normalize(fragNormal); // Normal at the fragment
 
     // Ambient and diffuse lighting
-    vec3 ambient = 0.32 * texColor; // Ambient light contribution
+    vec3 ambient = 0.4 * texColor; // Ambient light contribution
     float diff = max(dot(norm, lightDir), 0.0); // Diffuse lighting factor
     vec3 diffuse = diff * texColor; // Diffuse contribution
 

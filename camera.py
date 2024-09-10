@@ -12,7 +12,7 @@ class Player:
 
         # Player movement attributes
         self.speed = 36.0  # Increased movement speed
-        self.jump_force = 4.8  # Higher jump force for more vertical mobility
+        self.jump_force = 4  # Higher jump force for more vertical mobility
         self.grounded = False
         self.gravity = -9.81  # Increased gravity for faster falling
         self.velocity = np.array([0.0, 0.0, 0.0], dtype='f4')
@@ -20,9 +20,9 @@ class Player:
         self.acceleration = 48.0  # Increased acceleration for quicker movement responsiveness
 
         # Player size attributes
-        self.width = 0.5  # Width of the player for collision detection
-        self.height = 1.0  # Height of the player for collision detection
-        self.length = 0.5  # Length of the player for collision detection
+        self.width = 0.6  # Width of the player for collision detection
+        self.height = 1.2  # Height of the player for collision detection
+        self.length = 0.6  # Length of the player for collision detection
 
         self.update_camera_vectors()
 
