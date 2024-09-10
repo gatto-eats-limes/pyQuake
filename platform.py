@@ -4,16 +4,20 @@ import moderngl
 
 
 class Platform:
-    def __init__(self, ctx, texture_path, width=8.0, length=8.0, height=1.0, tile_factor=(8.0, 8.0)):
+    def __init__(self, ctx, texture_path, side_texture_paths=None, width=8.0, length=8.0, height=1.0,
+                 tile_factor=(8.0, 8.0)):
         self.width = width
         self.length = length
         self.height = height
         self.tile_factor = tile_factor
+
         self.min_bound = np.array([-self.width / 2, 0, -self.length / 2], dtype='f4')
         self.max_bound = np.array([self.width / 2, self.height, self.length / 2], dtype='f4')
 
-        # Load the texture
+        # Load the main texture and side textures
         self.texture = self.load_texture(ctx, texture_path)
+        self.side_textures = [self.load_texture(ctx, path) for path in side_texture_paths] if side_texture_paths else [
+                                                                                                                          self.texture] * 4
         self.vbo, self.ibo, self.vao = self.create_buffers(ctx)
 
     def load_texture(self, ctx, filepath):
@@ -38,25 +42,25 @@ class Platform:
             -self.width / 2, self.height, self.length / 2, 0, 1, 0, 0, self.tile_factor[1],
 
             # Side faces (Y = 0 to height)
-            # Front face
+            # Front face (using side texture)
             -self.width / 2, 0, -self.length / 2, 0, 0, -1, 0, 0,
             self.width / 2, 0, -self.length / 2, 0, 0, -1, self.tile_factor[0], 0,
             self.width / 2, self.height, -self.length / 2, 0, 0, -1, self.tile_factor[0], self.tile_factor[1],
             -self.width / 2, self.height, -self.length / 2, 0, 0, -1, 0, self.tile_factor[1],
 
-            # Back face
+            # Back face (using side texture)
             -self.width / 2, 0, self.length / 2, 0, 0, 1, 0, 0,
             self.width / 2, 0, self.length / 2, 0, 0, 1, self.tile_factor[0], 0,
             self.width / 2, self.height, self.length / 2, 0, 0, 1, self.tile_factor[0], self.tile_factor[1],
             -self.width / 2, self.height, self.length / 2, 0, 0, 1, 0, self.tile_factor[1],
 
-            # Left face
+            # Left face (using side texture)
             -self.width / 2, 0, -self.length / 2, -1, 0, 0, 0, 0,
             -self.width / 2, 0, self.length / 2, -1, 0, 0, self.tile_factor[0], 0,
             -self.width / 2, self.height, self.length / 2, -1, 0, 0, self.tile_factor[0], self.tile_factor[1],
             -self.width / 2, self.height, -self.length / 2, -1, 0, 0, 0, self.tile_factor[1],
 
-            # Right face
+            # Right face (using side texture)
             self.width / 2, 0, -self.length / 2, 1, 0, 0, 0, 0,
             self.width / 2, 0, self.length / 2, 1, 0, 0, self.tile_factor[0], 0,
             self.width / 2, self.height, self.length / 2, 1, 0, 0, self.tile_factor[0], self.tile_factor[1],
@@ -105,9 +109,9 @@ class Platform:
         tolerance = 0.01
 
         collision = (
-            player_min[0] < self.max_bound[0] + tolerance and player_max[0] > self.min_bound[0] - tolerance and
-            player_min[1] < self.max_bound[1] + tolerance and player_max[1] > self.min_bound[1] - tolerance and
-            player_min[2] < self.max_bound[2] + tolerance and player_max[2] > self.min_bound[2] - tolerance
+                player_min[0] < self.max_bound[0] + tolerance and player_max[0] > self.min_bound[0] - tolerance and
+                player_min[1] < self.max_bound[1] + tolerance and player_max[1] > self.min_bound[1] - tolerance and
+                player_min[2] < self.max_bound[2] + tolerance and player_max[2] > self.min_bound[2] - tolerance
         )
 
         if not collision:
@@ -152,5 +156,15 @@ class Platform:
     def render(self, program, model_matrix, light_pos):
         program['model'].write(model_matrix.tobytes())
         program['lightPos'].value = tuple(light_pos)
+
+        # Bind the main texture for the top and bottom faces
         self.texture.use(0)
+        self.vao.render(moderngl.TRIANGLES)
+
+        # Bind the side textures for the side faces
+        for i, side_texture in enumerate(self.side_textures):
+            side_texture.use(i + 1)  # Use different texture units for each side
+
+        # Render the side faces separately
+        program['in_uv'].value = (0, 0)  # Reset texture coordinates if needed
         self.vao.render(moderngl.TRIANGLES)
