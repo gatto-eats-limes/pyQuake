@@ -12,7 +12,7 @@ class Player:
 
         # Player movement attributes
         self.speed = 36.0  # Increased movement speed
-        self.jump_force = 5.0  # Higher jump force for more vertical mobility
+        self.jump_force = 4.0  # Higher jump force for more vertical mobility
         self.grounded = False
         self.gravity = -9.81  # Increased gravity for faster falling
         self.velocity = np.array([0.0, 0.0, 0.0], dtype='f4')
@@ -60,13 +60,13 @@ class Player:
         """Make the player jump if grounded."""
         if self.grounded:
             self.velocity[1] = self.jump_force
-            self.grounded = False
+            self.grounded = False  # Set to false after jumping
 
     def apply_gravity(self, delta_time):
         """Apply gravity to the player's vertical velocity."""
         if not self.grounded:
             self.velocity[1] += self.gravity * delta_time
-            self.position[1] += self.velocity[1] * delta_time
+        self.position[1] += self.velocity[1] * delta_time
 
     def update_velocity(self, forward_input, right_input, delta_time):
         """Update horizontal movement based on player input."""
@@ -91,9 +91,16 @@ class Player:
 
     def check_collision(self, min_bound, max_bound):
         """Check for collision with the specified bounding box."""
-        player_min = np.array([self.position[0] - self.width / 2, self.position[1], self.position[2] - self.length / 2])
-        player_max = np.array(
-            [self.position[0] + self.width / 2, self.position[1] + self.height, self.position[2] + self.length / 2])
+        player_min = np.array([
+            self.position[0] - self.width / 2,
+            self.position[1],
+            self.position[2] - self.length / 2
+        ])
+        player_max = np.array([
+            self.position[0] + self.width / 2,
+            self.position[1] + self.height,
+            self.position[2] + self.length / 2
+        ])
 
         return (player_min[0] < max_bound[0] and player_max[0] > min_bound[0] and
                 player_min[1] < max_bound[1] and player_max[1] > min_bound[1] and
@@ -101,34 +108,53 @@ class Player:
 
     def resolve_collision(self, min_bound, max_bound):
         """Resolve collision with the specified bounding box."""
-        player_min = np.array([self.position[0] - self.width / 2, self.position[1], self.position[2] - self.length / 2])
-        player_max = np.array(
-            [self.position[0] + self.width / 2, self.position[1] + self.height, self.position[2] + self.length / 2])
+        player_min = np.array([
+            self.position[0] - self.width / 2,
+            self.position[1],
+            self.position[2] - self.length / 2
+        ])
+        player_max = np.array([
+            self.position[0] + self.width / 2,
+            self.position[1] + self.height,
+            self.position[2] + self.length / 2
+        ])
 
         overlap_x = min(max_bound[0] - player_min[0], player_max[0] - min_bound[0])
         overlap_y = min(max_bound[1] - player_min[1], player_max[1] - min_bound[1])
         overlap_z = min(max_bound[2] - player_min[2], player_max[2] - min_bound[2])
 
+        # Resolve collision based on the smallest overlap
         if overlap_x < overlap_y and overlap_x < overlap_z:
+            # Colliding with sides
             if self.position[0] < (min_bound[0] + max_bound[0]) / 2:
-                self.position[0] -= overlap_x
+                self.position[0] -= overlap_x  # Move left
             else:
-                self.position[0] += overlap_x
-            self.velocity[0] = 0
+                self.position[0] += overlap_x  # Move right
+            self.velocity[0] = 0  # Reset horizontal velocity
+            self.grounded = False  # Not grounded when colliding with sides
+
         elif overlap_y < overlap_x and overlap_y < overlap_z:
+            # Colliding with the top or bottom
             if self.position[1] < (min_bound[1] + max_bound[1]) / 2:
-                self.position[1] -= overlap_y
-                self.grounded = True  # Ground collision
+                self.position[1] -= overlap_y  # Move down (land on top)
+                self.grounded = True  # Set grounded when landing
             else:
-                self.position[1] += overlap_y
-            self.velocity[1] = 0
-            self.grounded = True
+                self.position[1] += overlap_y  # Move up
+            self.velocity[1] = 0  # Reset vertical velocity
+
         else:
+            # Colliding with the front or back
             if self.position[2] < (min_bound[2] + max_bound[2]) / 2:
-                self.position[2] -= overlap_z
+                self.position[2] -= overlap_z  # Move backward
             else:
-                self.position[2] += overlap_z
-            self.velocity[2] = 0
+                self.position[2] += overlap_z  # Move forward
+            self.velocity[2] = 0  # Reset depth velocity
+            self.grounded = False  # Not grounded when colliding with front or back
+
+        # Check if the player is grounded based on Y position
+        if player_min[1] <= min_bound[1]:  # Player is on the ground
+            self.position[1] = min_bound[1] + self.height / 2  # Reset to ground level
+            self.grounded = True  # Player is grounded on the ground
 
     def update_physics(self, delta_time, forward_input, right_input, min_bound, max_bound):
         """Update the player's physics, including movement and collision detection."""
@@ -137,3 +163,9 @@ class Player:
 
         if self.check_collision(min_bound, max_bound):
             self.resolve_collision(min_bound, max_bound)
+
+        # Check if the player is on the ground
+        if self.position[1] <= min_bound[1] + self.height / 2:
+            self.position[1] = min_bound[1] + self.height / 2  # Reset to ground level
+            self.grounded = True  # Player is grounded on the ground
+

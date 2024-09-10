@@ -60,9 +60,9 @@ class RyanEngine:
 
         self.player.update_velocity(forward_input, right_input, delta_time)
 
-        if keys[pygame.K_SPACE] and self.player.grounded:
+        # Jumping logic: Check if space is pressed and player is grounded
+        if keys[pygame.K_SPACE]:
             self.player.jump()
-            self.player.grounded = False
 
     def handle_mouse_movement(self):
         mouse_pos = pygame.mouse.get_pos()
@@ -94,7 +94,7 @@ class RyanEngine:
         """Check for collisions with all platforms."""
         for platform in self.platforms:
             if platform.check_collision(self.player):
-                self.player.grounded = True  # Set grounded state or handle collision response
+                # No need to call resolve_collision as it is integrated into check_collision
                 break  # Exit after finding a collision, if you want to apply grounded state for any collision
         else:
             self.player.grounded = False  # Reset grounded state if no collision is detected
