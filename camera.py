@@ -30,7 +30,7 @@ class Player:
         self.bob_velocity = 0.0  # Speed for bobbing effect
         self.bob_sway = 0.0  # Horizontal sway effect
         self.bob_sway_speed = 1.0  # Speed of sway
-        self.bob_sway_amplitude = 0.0125  # Reduced amplitude of sway
+        self.bob_sway_amplitude = 0.025  # Reduced amplitude of sway
         self.movement_keys_held = False  # Flag for movement keys
         self.bob_damping = 0.0  # Damping factor for smoother stop
 
