@@ -1,6 +1,5 @@
 import numpy as np
-from math import sin, cos, radians
-
+from math import sin, cos, radians, pi
 
 class Player:
     def __init__(self, position, up_vector):
@@ -12,9 +11,9 @@ class Player:
 
         # Player movement attributes
         self.speed = 36.0  # Increased movement speed
-        self.jump_force = 4  # Higher jump force for more vertical mobility
+        self.jump_force = 5.0  # Higher jump force for more vertical mobility
         self.grounded = False
-        self.gravity = -9.81  # Increased gravity for faster falling
+        self.gravity = -12.0 # Increased gravity for faster falling
         self.velocity = np.array([0.0, 0.0, 0.0], dtype='f4')
         self.friction = 0.3  # Lower friction for more slide
         self.acceleration = 48.0  # Increased acceleration for quicker movement responsiveness
@@ -23,6 +22,23 @@ class Player:
         self.width = 0.6  # Width of the player for collision detection
         self.height = 1.2  # Height of the player for collision detection
         self.length = 0.6  # Length of the player for collision detection
+
+        # Camera bobbing attributes
+        self.bob_amplitude = 0.025  # Reduced amplitude of bobbing effect
+        self.bob_frequency = 3.0  # Frequency of bobbing (cycles per second)
+        self.bob_time = 0.0  # Time tracker for bobbing effect
+        self.bob_velocity = 0.0  # Speed for bobbing effect
+        self.bob_sway = 0.0  # Horizontal sway effect
+        self.bob_sway_speed = 1.0  # Speed of sway
+        self.bob_sway_amplitude = 0.0125  # Reduced amplitude of sway
+        self.movement_keys_held = False  # Flag for movement keys
+        self.bob_damping = 0.0  # Damping factor for smoother stop
+
+        # Smoothing attributes
+        self.smoothing_factor = 0.7  # Smoothing factor for camera movement
+        self.smoothed_position = np.array(position, dtype='f4')  # Smoothed camera position
+        self.smoothed_yaw = self.yaw  # Smoothed yaw
+        self.smoothed_pitch = self.pitch  # Smoothed pitch
 
         self.update_camera_vectors()
 
@@ -40,20 +56,50 @@ class Player:
         self.up /= np.linalg.norm(self.up)
 
     def create_view_matrix(self):
-        """Create a view matrix for camera based on current position and orientation."""
+        """Create a view matrix for the camera based on current position and orientation."""
+        bobbing_height, bob_sway = self.calculate_bobbing()
+        target_camera_position = self.position + np.array([bob_sway, bobbing_height, 0.0])
+
+        # Smooth the camera position
+        self.smoothed_position += (target_camera_position - self.smoothed_position) * self.smoothing_factor
+
         return np.array([
-            [self.right[0], self.up[0], -self.front[0], 0.0],
-            [self.right[1], self.up[1], -self.front[1], 0.0],
-            [self.right[2], self.up[2], -self.front[2], 0.0],
-            [-np.dot(self.right, self.position), -np.dot(self.up, self.position), np.dot(self.front, self.position),
-             1.0]
+            self.right[0], self.up[0], -self.front[0], 0.0,
+            self.right[1], self.up[1], -self.front[1], 0.0,
+            self.right[2], self.up[2], -self.front[2], 0.0,
+            -np.dot(self.right, self.smoothed_position), -np.dot(self.up, self.smoothed_position), np.dot(self.front, self.smoothed_position),
+            1.0
         ], dtype='f4')
+
+    def calculate_bobbing(self):
+        """Calculate the camera bobbing effect based on movement."""
+        if self.grounded and self.movement_keys_held and np.linalg.norm(self.velocity[:2]) > 0:
+            self.bob_time += 0.016  # Increment time (approx 60 FPS)
+
+            # Calculate bobbing effect
+            bobbing_height = self.bob_amplitude * sin(self.bob_time * self.bob_frequency * 2 * pi)
+            # Calculate horizontal sway effect
+            self.bob_sway = self.bob_sway_amplitude * sin(self.bob_time * self.bob_sway_speed * 2 * pi)
+
+            return bobbing_height, self.bob_sway
+        else:
+            # Gradually dampen the bobbing and sway effect when not moving
+            self.bob_time = max(0.0, self.bob_time - self.bob_damping)  # Dampen the time
+            bobbing_height = self.bob_amplitude * sin(self.bob_time * self.bob_frequency * 2 * pi)
+            self.bob_sway *= (1.0 - self.bob_damping)  # Apply damping to sway
+
+            return bobbing_height, self.bob_sway
 
     def process_mouse_movement(self, x_offset, y_offset, sensitivity=0.1):
         """Process mouse movement to update camera orientation."""
         self.yaw += x_offset * sensitivity
         self.pitch -= y_offset * sensitivity
         self.pitch = np.clip(self.pitch, -89.0, 89.0)  # Limit pitch
+
+        # Smooth the yaw and pitch
+        self.smoothed_yaw += (self.yaw - self.smoothed_yaw) * self.smoothing_factor
+        self.smoothed_pitch += (self.pitch - self.smoothed_pitch) * self.smoothing_factor
+
         self.update_camera_vectors()
 
     def jump(self):
@@ -75,6 +121,9 @@ class Player:
 
         forward_acceleration = self.acceleration * forward_input
         right_acceleration = self.acceleration * right_input
+
+        # Determine if movement keys are held
+        self.movement_keys_held = forward_input != 0 or right_input != 0
 
         self.velocity[0] += right_acceleration * self.right[0] * delta_time
         self.velocity[2] += right_acceleration * self.right[2] * delta_time
@@ -168,4 +217,3 @@ class Player:
         if self.position[1] <= min_bound[1] + self.height / 2:
             self.position[1] = min_bound[1] + self.height / 2  # Reset to ground level
             self.grounded = True  # Player is grounded on the ground
-
