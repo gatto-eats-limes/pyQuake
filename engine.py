@@ -1,7 +1,7 @@
 import pygame
 import moderngl
 import numpy as np
-from camera import Player
+from player import Player
 from platform import Platform
 
 class RyanEngine:
@@ -21,8 +21,6 @@ class RyanEngine:
         self.light_pos = np.array([10.0, 10.0, 10.0], dtype='f4')
 
         self.platforms = [Platform(self.ctx, "textures/placeholder_top.png", "textures/placeholder_side.png")]
-        # Add more platforms or collidable objects to the list
-        # self.platforms.append(AnotherPlatform(self.ctx, "another-image.jpg"))
 
         pygame.event.set_grab(True)
         pygame.mouse.set_visible(False)
