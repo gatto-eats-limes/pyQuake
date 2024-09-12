@@ -1,3 +1,4 @@
+import json
 import pygame
 import moderngl
 import numpy as np
@@ -5,7 +6,7 @@ from player import Player
 from platform import Platform
 
 class RyanEngine:
-    def __init__(self, width=800, height=600):
+    def __init__(self, width=800, height=600, scene_file='scenes/testing.json'):
         self.width, self.height = width, height
         self.last_mouse_pos = None
 
@@ -16,15 +17,37 @@ class RyanEngine:
         self.ctx = moderngl.create_context()
         self.ctx.enable(moderngl.DEPTH_TEST)
 
-        self.player = Player([0.0, 5.0, 0.0], [0.0, 1.0, 0.0])
+        self.platforms = []
+        self.player = None
+        self.load_scene(scene_file)  # Load the scene during initialization
         self.projection = self.create_projection_matrix()
         self.light_pos = np.array([10.0, 10.0, 10.0], dtype='f4')
-
-        self.platforms = [Platform(self.ctx, "textures/placeholder_top.png", "textures/placeholder_side.png")]
 
         pygame.event.set_grab(True)
         pygame.mouse.set_visible(False)
         self.center_mouse()
+
+    def load_scene(self, scene_file):
+        """Load platforms and the player from a scene file."""
+        with open(scene_file, 'r') as f:
+            scene_data = json.load(f)
+
+        # Load platforms
+        for platform_data in scene_data['platforms']:
+            position = platform_data['position']
+            texture_top = platform_data['texture_top']
+            texture_side = platform_data['texture_side']
+            platform = Platform(self.ctx, texture_top, texture_side)
+            platform.position = np.array(position, dtype='f4')  # Set the platform position
+            self.platforms.append(platform)
+
+        # Load player
+        if 'player' in scene_data:
+            player_data = scene_data['player']
+            player_position = player_data['position']
+            self.player = Player(player_position, [0.0, 1.0, 0.0])
+            self.player.velocity = np.array(player_data['velocity'], dtype='f4')
+            self.player.rotation = np.array(player_data['rotation'], dtype='f4')
 
     def create_projection_matrix(self):
         aspect_ratio = self.width / self.height
@@ -92,8 +115,7 @@ class RyanEngine:
         """Check for collisions with all platforms."""
         for platform in self.platforms:
             if platform.check_collision(self.player):
-                # No need to call resolve_collision as it is integrated into check_collision
-                break  # Exit after finding a collision, if you want to apply grounded state for any collision
+                break  # Exit after finding a collision
         else:
             self.player.grounded = False  # Reset grounded state if no collision is detected
 

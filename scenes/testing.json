@@ -1,0 +1,14 @@
+{
+  "platforms": [
+    {
+      "position": [0.0, 0.0, 0.0],
+      "texture_top": "textures/placeholder_top.png",
+      "texture_side": "textures/placeholder_side.png"
+    }
+  ],
+  "player": {
+    "position": [0.0, 5.0, 0.0],
+    "velocity": [0.0, 0.0, 0.0],
+    "rotation": [0.0, 0.0, 0.0]
+  }
+}
